@@ -10,10 +10,6 @@ trainer:
       init_args:
         save_dir: runs
         name: burnscars_yaml
-    - class_path: lightning.pytorch.loggers.CSVLogger
-      init_args:
-        save_dir: runs
-        name: burnscars_yaml
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:

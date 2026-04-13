@@ -45,10 +45,11 @@ datamodule = terratorch.datamodules.GenericNonGeoSegmentationDataModule(
     no_label_replace=-1,
 )
 
-# Val metrics via Trainer
+# Validation and test metrics via Trainer
 model = terratorch.tasks.SemanticSegmentationTask.load_from_checkpoint(ckpt_path)
 trainer = pl.Trainer(accelerator="auto", devices=1, precision='bf16-mixed')
-trainer.validate(model, datamodule=datamodule)
+trainer.validate(model, datamodule=datamodule) # Validation metrics
+trainer.test(model, datamodule=datamodule) # Test metrics
 
 # Predict & plot
 model.eval()
@@ -66,7 +67,7 @@ with torch.no_grad():
     outputs = model(images)
     preds = outputs.output.argmax(dim=1)
 
-out_dir = Path(ckpt_path).parents[1] / "predictions"
+out_dir = Path(ckpt_path).parents[2] / "predictions"
 out_dir.mkdir(parents=True, exist_ok=True)
 
 for i in range(min(4, len(images))):
