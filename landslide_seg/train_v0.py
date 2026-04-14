@@ -91,7 +91,7 @@ def train(opt):
     best_metrics = {}
     start_epoch, end_epoch = (0, epochs)
     if os.path.exists(weight_file):
-        checkpoint = torch.load(weight_file, map_location=device)
+        checkpoint = torch.load(weight_file, map_location=device, weights_only=False)
         # load into unwrapped model
         unwrapped = model.module if hasattr(model, 'module') else model
         unwrapped.load_state_dict(checkpoint['model'])
@@ -193,7 +193,7 @@ def val_one_epoch(val_dataloader, model, confusion_matrix, device):
                 os.makedirs('outputs', exist_ok=True)
                 for j in range(min(5, preds.size(0))):
                     save_file = os.path.join('outputs', 'val_%d.png' % (j))
-                    plot_image(imgs[j], preds[j], save_file)
+                    plot_image(imgs[j], pred=preds[j], gt=targets[j], save_file=save_file)
 
     avg_loss = torch.tensor(losses).mean().item()
 

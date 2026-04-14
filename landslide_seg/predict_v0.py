@@ -23,7 +23,7 @@ def predict(opt):
     # Load weights
     if not os.path.exists(opt.weight):
         raise FileNotFoundError(f"Model weight file not found: {opt.weight}")
-    checkpoint = torch.load(opt.weight, map_location=device)
+    checkpoint = torch.load(opt.weight, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint['model'])
 
     # Validation dataset
@@ -49,7 +49,7 @@ def predict(opt):
             if i < 5:
                 for j in range(min(3, preds.size(0))):
                     save_file = os.path.join(opt.output, 'pred_%d_%d.png' % (i, j))
-                    plot_image(imgs[j], preds[j], save_file)
+                    plot_image(imgs[j], pred=preds[j], gt=targets[j], save_file=save_file)
 
     # Print results
     iou = confusion_matrix.get_iou()

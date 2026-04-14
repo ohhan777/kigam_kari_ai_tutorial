@@ -16,7 +16,7 @@ def make_color_label(label):
     return color_label
 
 
-def plot_image(img, label=None, save_file='image.png', alpha=0.3):
+def plot_image(img, pred=None, gt=None, save_file='image.png', alpha=0.3):
     # if img is a tensor, convert to a numpy array
     if torch.is_tensor(img):  # input: (14, H, W) tensor, MEAN/STD normalized
         img = img.cpu().numpy()
@@ -26,19 +26,31 @@ def plot_image(img, label=None, save_file='image.png', alpha=0.3):
     rgb = histogram_stretch(rgb)  # histogram stretch for better visualization
     rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)  # RGB to BGR for cv2
 
-    if label is not None:
-        # if label is tensor, convert to numpy
-        if torch.is_tensor(label):
-            label = label.cpu().numpy().astype(np.uint8)
+    if pred is not None:
+        if torch.is_tensor(pred):
+            pred = pred.cpu().numpy().astype(np.uint8)
+        color_pred = make_color_label(pred)
+        color_pred = cv2.cvtColor(color_pred, cv2.COLOR_RGB2BGR)
+        overlay = cv2.addWeighted(rgb, 1.0, color_pred, alpha, 0)
 
-        color_label = make_color_label(label)
-        color_label = cv2.cvtColor(color_label, cv2.COLOR_RGB2BGR)  # RGB to BGR for cv2
-
-        rgb = cv2.addWeighted(rgb, 1.0, color_label, alpha, 0)  # overlays image and label
+    if gt is not None and pred is not None:
+        # 2x2: [Image, GT] / [Overlay, Pred]
+        if torch.is_tensor(gt):
+            gt = gt.cpu().numpy().astype(np.uint8)
+        color_gt = make_color_label(gt)
+        color_gt = cv2.cvtColor(color_gt, cv2.COLOR_RGB2BGR)
+        top = np.hstack([rgb, color_gt])
+        bottom = np.hstack([overlay, color_pred])
+        canvas = np.vstack([top, bottom])
+    elif pred is not None:
+        # 1x3: [Image, Overlay, Pred]
+        canvas = np.hstack([rgb, overlay, color_pred])
+    else:
+        canvas = rgb
 
     # save image
     os.makedirs(os.path.dirname(save_file) or '.', exist_ok=True)
-    cv2.imwrite(save_file, rgb)
+    cv2.imwrite(save_file, canvas)
 
 
 def histogram_stretch(img, lower_percentile=2, upper_percentile=98):
