@@ -118,6 +118,7 @@ def train(opt):
         lr_scheduler.step(epoch_loss)
         # validation
         val_epoch_loss = val_one_epoch(val_dataloader, model, confusion_matrix, device)
+        confusion_matrix.sync(device)  # sync across DDP ranks (no-op if single GPU)
         val_epoch_iou = confusion_matrix.get_iou()
         val_epoch_mean_iou = confusion_matrix.get_mean_iou()
         val_epoch_f1 = confusion_matrix.get_f1(cls=1)

@@ -2,6 +2,7 @@
 
 import numpy as np
 import torch
+import torch.distributed as dist
 
 
 class ConfusionMatrix:
@@ -64,3 +65,11 @@ class ConfusionMatrix:
         p = self.get_precision(cls)
         r = self.get_recall(cls)
         return 2 * p * r / (p + r + 1e-10)
+
+    def sync(self, device):
+        """Sync confusion matrix across all DDP ranks via all_reduce."""
+        if not dist.is_initialized():
+            return
+        cm_tensor = torch.from_numpy(self.confusion_matrix).to(device)
+        dist.all_reduce(cm_tensor, op=dist.ReduceOp.SUM)
+        self.confusion_matrix = cm_tensor.cpu().numpy()
