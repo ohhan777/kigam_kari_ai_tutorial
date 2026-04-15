@@ -16,6 +16,20 @@ def make_color_label(label):
     return color_label
 
 
+def _add_title(tile, text, bar_h=24):
+    """Prepend a black bar with centered white text above the tile."""
+    h, w = tile.shape[:2]
+    bar = np.zeros((bar_h, w, 3), dtype=np.uint8)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale = 0.6
+    thick = 1
+    (tw, th), _ = cv2.getTextSize(text, font, scale, thick)
+    x = max(0, (w - tw) // 2)
+    y = (bar_h + th) // 2
+    cv2.putText(bar, text, (x, y), font, scale, (255, 255, 255), thick, cv2.LINE_AA)
+    return np.vstack([bar, tile])
+
+
 def plot_image(img, pred=None, gt=None, save_file='image.png', alpha=0.3):
     # if img is a tensor, convert to a numpy array
     if torch.is_tensor(img):  # input: (14, H, W) tensor, MEAN/STD normalized
@@ -34,19 +48,23 @@ def plot_image(img, pred=None, gt=None, save_file='image.png', alpha=0.3):
         overlay = cv2.addWeighted(rgb, 1.0, color_pred, alpha, 0)
 
     if gt is not None and pred is not None:
-        # 2x2: [Image, GT] / [Overlay, Pred]
+        # 2x2: [Image, GT] / [Image+Pred, Pred]
         if torch.is_tensor(gt):
             gt = gt.cpu().numpy().astype(np.uint8)
         color_gt = make_color_label(gt)
         color_gt = cv2.cvtColor(color_gt, cv2.COLOR_RGB2BGR)
-        top = np.hstack([rgb, color_gt])
-        bottom = np.hstack([overlay, color_pred])
+        top = np.hstack([_add_title(rgb, 'Image'), _add_title(color_gt, 'GT')])
+        bottom = np.hstack([_add_title(overlay, 'Image+Pred'), _add_title(color_pred, 'Pred')])
         canvas = np.vstack([top, bottom])
     elif pred is not None:
-        # 1x3: [Image, Overlay, Pred]
-        canvas = np.hstack([rgb, overlay, color_pred])
+        # 1x3: [Image, Image+Pred, Pred]
+        canvas = np.hstack([
+            _add_title(rgb, 'Image'),
+            _add_title(overlay, 'Image+Pred'),
+            _add_title(color_pred, 'Pred'),
+        ])
     else:
-        canvas = rgb
+        canvas = _add_title(rgb, 'Image')
 
     # save image
     os.makedirs(os.path.dirname(save_file) or '.', exist_ok=True)

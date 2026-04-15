@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from utils.plots import plot_image
 from utils.metrics import ConfusionMatrix
-from utils.landsalides4sens_dataset import Landslides4SenseDataset
+from utils.landslides4sense_dataset import Landslides4SenseDataset
 from models.unet import UNet
 import argparse
 
@@ -26,9 +26,9 @@ def predict(opt):
     checkpoint = torch.load(opt.weight, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint['model'])
 
-    # Validation dataset
-    val_dataset = Landslides4SenseDataset(opt.data, train=False)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size,
+    # Evaluation dataset (val or test)
+    eval_dataset = Landslides4SenseDataset(opt.data, split=opt.split)
+    eval_dataloader = torch.utils.data.DataLoader(eval_dataset, batch_size=opt.batch_size,
                             shuffle=False, num_workers=4, pin_memory=True)
 
     # Create output directory
@@ -36,10 +36,10 @@ def predict(opt):
 
     confusion_matrix = ConfusionMatrix(num_classes)
 
-    print('Predicting...')
+    print(f'Predicting on split={opt.split} ({len(eval_dataset)} samples)...')
     model.eval()
     with torch.no_grad():
-        for i, (imgs, targets, img_files) in enumerate(tqdm(val_dataloader, desc='Processing')):
+        for i, (imgs, targets, img_files) in enumerate(tqdm(eval_dataloader, desc='Processing')):
             imgs, targets = imgs.to(device), targets.to(device)
             preds = model(imgs)
             preds = torch.argmax(preds, dim=1)  # (B, H, W)
@@ -75,6 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', type=str, default='./outputs', help='Output directory')
     parser.add_argument('--weight', '-w', default='weights/landslide_unet_adam_ce_best.pth', help='Weight file path')
     parser.add_argument('--batch-size', type=int, default=16, help='Batch size')
+    parser.add_argument('--split', '-s', choices=['val', 'test'], default='val',
+                        help='Which split to evaluate on (val or test)')
     opt = parser.parse_args()
 
     predict(opt)
